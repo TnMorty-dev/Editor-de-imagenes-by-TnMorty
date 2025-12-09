@@ -205,7 +205,12 @@ const elements = {
     toastContainer: document.getElementById('toastContainer'),
 
     // Canvas content
-    canvasContent: document.getElementById('canvasContent')
+    canvasContent: document.getElementById('canvasContent'),
+
+    // Sidebar
+    sidebar: document.querySelector('.sidebar'),
+    btnToggleMenu: document.getElementById('btnToggleMenu'),
+    sidebarOverlay: document.getElementById('sidebarOverlay')
 };
 
 let mainCtx;
@@ -241,7 +246,16 @@ function setupEventListeners() {
     document.getElementById('btnManualRes').addEventListener('click', () => showPanel('panelManualRes'));
     document.getElementById('btnConvert').addEventListener('click', () => showPanel('panelConvert'));
     document.getElementById('btnEditor').addEventListener('click', () => showPanel('panelEditor'));
+    document.getElementById('btnEditor').addEventListener('click', () => showPanel('panelEditor'));
     document.getElementById('btnExit').addEventListener('click', resetEditor);
+
+    // Sidebar Toggle
+    if (elements.btnToggleMenu) {
+        elements.btnToggleMenu.addEventListener('click', toggleSidebar);
+    }
+    if (elements.sidebarOverlay) {
+        elements.sidebarOverlay.addEventListener('click', closeSidebar);
+    }
 
     // View Options
     elements.btnToggleGrid.addEventListener('click', toggleGrid);
@@ -1690,17 +1704,6 @@ function resetEditor() {
     elements.downloadSection.hidden = true;
     elements.fileInput.value = '';
 
-    renderLayersPanel();
-    renderHistoryPanel();
-    exitEditMode();
-    hideToolPanels();
-
-    showToast('Editor reiniciado', 'success');
-}
-
-function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
     const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : '⚠';
     toast.innerHTML = `<span>${icon}</span> ${message}`;
     elements.toastContainer.appendChild(toast);
@@ -2151,3 +2154,19 @@ window.removeEventListener('resize', fitToScreen);
 window.addEventListener('resize', fitToScreen);
 
 
+
+// ============================================
+// Sidebar Management
+// ============================================
+function toggleSidebar() {
+    document.body.classList.toggle('sidebar-open');
+    if (elements.sidebar) elements.sidebar.classList.toggle('open');
+}
+
+function closeSidebar() {
+    document.body.classList.remove('sidebar-open');
+    if (elements.sidebar) elements.sidebar.classList.remove('open');
+}
+
+// Initialize
+init();
