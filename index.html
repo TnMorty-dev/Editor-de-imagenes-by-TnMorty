@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Editor de Imagen by TnMorty - Herramienta profesional de edición de imágenes online">
+    <title>Editor de Imagen by TnMorty</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-container">
+                <h1 class="logo">Editor de Imagen</h1>
+                <span class="brand-tag">by TnMorty</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Sidebar Menu -->
+            <aside class="sidebar">
+                <div class="menu-header">
+                    <span class="menu-icon">☰</span>
+                    <span>Menú Principal</span>
+                </div>
+                <nav class="menu-nav">
+                    <button class="menu-item" data-action="load" id="btnLoad">
+                        <span class="menu-number">0</span>
+                        <span class="menu-text">Cargar Imagen</span>
+                        <span class="menu-arrow">→</span>
+                    </button>
+                    <button class="menu-item" data-action="preset-resolution" id="btnPresetRes">
+                        <span class="menu-number">1</span>
+                        <span class="menu-text">Cambiar Resolución (predeterminadas)</span>
+                        <span class="menu-arrow">→</span>
+                    </button>
+                    <button class="menu-item" data-action="manual-resolution" id="btnManualRes">
+                        <span class="menu-number">2</span>
+                        <span class="menu-text">Cambiar Resolución Manual</span>
+                        <span class="menu-arrow">→</span>
+                    </button>
+                    <button class="menu-item" data-action="convert-format" id="btnConvert">
+                        <span class="menu-number">3</span>
+                        <span class="menu-text">Convertir Formato</span>
+                        <span class="menu-arrow">→</span>
+                    </button>
+                    <button class="menu-item" data-action="editor" id="btnEditor">
+                        <span class="menu-number">4</span>
+                        <span class="menu-text">Editor de Imagen</span>
+                        <span class="menu-arrow">→</span>
+                    </button>
+
+                    <div class="menu-divider"></div>
+                    <button class="menu-item" data-action="toggle-grid" id="btnToggleGrid">
+                        <span class="menu-number">👁️</span>
+                        <span class="menu-text">Cuadrícula</span>
+                        <span class="menu-toggle-icon" id="iconGrid">⬜</span>
+                    </button>
+                    <button class="menu-item active" data-action="toggle-snap" id="btnToggleSnap">
+                        <span class="menu-number">🧲</span>
+                        <span class="menu-text">Autocolocado</span>
+                        <span class="menu-toggle-icon" id="iconSnap">✅</span>
+                    </button>
+                    <button class="menu-item active" data-action="toggle-deform" id="btnToggleDeform">
+                        <span class="menu-number">🔓</span>
+                        <span class="menu-text">Deformar</span>
+                        <span class="menu-toggle-icon" id="iconDeform">ON</span>
+                    </button>
+                    <button class="menu-item menu-item-exit" data-action="exit" id="btnExit">
+                        <span class="menu-number">5</span>
+                        <span class="menu-text">Salir / Reiniciar</span>
+                        <span class="menu-arrow">×</span>
+                    </button>
+                </nav>
+                <div class="sidebar-footer">
+                    <p>by TnMorty</p>
+                    <p class="version-tag">v0.0.1</p>
+                </div>
+            </aside>
+
+            <!-- Canvas Area -->
+            <section class="canvas-area">
+                <div class="canvas-container" id="canvasContainer">
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-content">
+                            <span class="drop-icon">🖼️</span>
+                            <p class="drop-text">Arrastra una imagen aquí</p>
+                            <p class="drop-subtext">o haz clic para seleccionar</p>
+                            <input type="file" id="fileInput" accept="image/*" hidden>
+                        </div>
+                    </div>
+
+                    <!-- Content Wrapper for Zoom -->
+                    <div class="canvas-content" id="canvasContent">
+                        <canvas id="mainCanvas"></canvas>
+                        <div id="gridOverlay" class="grid-overlay" hidden></div>
+                        <!-- Interactive elements overlay -->
+                        <div class="interactive-layer" id="interactiveLayer" hidden>
+                            <!-- Move selection box -->
+                            <div class="move-box" id="moveBox" hidden>
+                                <div class="move-handle nw" data-handle="nw"></div>
+                                <div class="move-handle ne" data-handle="ne"></div>
+                                <div class="move-handle sw" data-handle="sw"></div>
+                                <div class="move-handle se" data-handle="se"></div>
+                            </div>
+                            <!-- Crop selection box -->
+                            <div class="crop-box" id="cropBox" hidden>
+                                <div class="crop-handle nw" data-handle="nw"></div>
+                                <div class="crop-handle ne" data-handle="ne"></div>
+                                <div class="crop-handle sw" data-handle="sw"></div>
+                                <div class="crop-handle se" data-handle="se"></div>
+                            </div>
+                            <!-- Draggable text element -->
+                            <div class="draggable-text" id="draggableText" hidden>
+                                <span class="text-content" id="textPreview">Texto</span>
+                                <div class="resize-handle" data-handle="resize"></div>
+                            </div>
+                            <!-- Draggable overlay image -->
+                            <div class="draggable-overlay" id="draggableOverlay" hidden>
+                                <img id="overlayPreview" src="" alt="Overlay">
+                                <div class="resize-handle" data-handle="resize"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="canvas-info" id="canvasInfo">
+                    <span id="imageSize">Sin imagen</span>
+                    <span class="separator">|</span>
+                    <span id="imageFormat">-</span>
+                </div>
+            </section>
+
+            <!-- Right Panel Area -->
+            <aside class="panel-area" id="panelArea">
+                <!-- Layers Panel (Always visible when image loaded) -->
+                <div class="panel layers-panel" id="panelLayers" hidden>
+                    <div class="panel-header">
+                        <h3>📑 Capas</h3>
+                        <div class="layer-actions">
+                            <div class="layer-dropdown">
+                                <button class="layer-action-btn" id="btnAddLayer" title="Añadir capa">+</button>
+                                <div class="layer-dropdown-menu" id="layerDropdownMenu" hidden>
+                                    <button class="dropdown-item" data-layer-type="blank">📄 Capa en Blanco</button>
+                                    <button class="dropdown-item" data-layer-type="transparent">🔲 Capa
+                                        Transparente</button>
+                                    <button class="dropdown-item" data-layer-type="image">🖼️ Agregar Imagen</button>
+                                </div>
+                            </div>
+                            <button class="layer-action-btn" id="btnDeleteLayer" title="Eliminar capa">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="panel-content layers-list" id="layersList">
+                        <!-- Layers will be added here dynamically -->
+                        <div class="empty-layers">
+                            <p>Carga una imagen para comenzar</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Panel (Always visible) -->
+                <div class="panel history-panel" id="panelHistory">
+                    <div class="panel-header">
+                        <h3>📜 Historial</h3>
+                        <button class="panel-action-btn" id="btnClearHistory" title="Limpiar historial">🧹</button>
+                    </div>
+                    <div class="panel-content history-list" id="historyList">
+                        <div class="empty-history">
+                            <p>Sin cambios aún</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preset Resolution Panel -->
+                <div class="panel" id="panelPresetRes" hidden>
+                    <div class="panel-header">
+                        <h3>Resolución Predeterminada</h3>
+                        <button class="panel-close" data-close>×</button>
+                    </div>
+                    <div class="panel-content">
+                        <button class="option-btn" data-preset="square">
+                            <span class="option-icon">◻️</span>
+                            <span class="option-label">Cuadrada</span>
+                            <span class="option-size">450 × 450</span>
+                        </button>
+                        <button class="option-btn" data-preset="banner">
+                            <span class="option-icon">🏞️</span>
+                            <span class="option-label">Banner</span>
+                            <span class="option-size">1600 × 500</span>
+                        </button>
+                        <button class="option-btn" data-preset="9:16">
+                            <span class="option-icon">📱</span>
+                            <span class="option-label">Story 9:16</span>
+                            <span class="option-size">1080 × 1920</span>
+                        </button>
+                        <button class="option-btn" data-preset="16:9">
+                            <span class="option-icon">📺</span>
+                            <span class="option-label">16:9 Automático</span>
+                            <span class="option-size">Ingresar ancho</span>
+                        </button>
+                        <div class="input-group" id="widthInputGroup" hidden>
+                            <label for="autoWidth">Ancho deseado:</label>
+                            <input type="number" id="autoWidth" placeholder="1920" min="100" max="7680">
+                            <button class="btn-primary" id="applyAutoRatio">Aplicar 16:9</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manual Resolution Panel -->
+                <div class="panel" id="panelManualRes" hidden>
+                    <div class="panel-header">
+                        <h3>Resolución Manual</h3>
+                        <button class="panel-close" data-close>×</button>
+                    </div>
+                    <div class="panel-content">
+                        <div class="input-group">
+                            <label for="manualWidth">Ancho (px):</label>
+                            <input type="number" id="manualWidth" placeholder="800" min="1" max="7680">
+                        </div>
+                        <div class="input-group">
+                            <label for="manualHeight">Alto (px):</label>
+                            <input type="number" id="manualHeight" placeholder="600" min="1" max="4320">
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="maintainAspect">
+                            <label for="maintainAspect">Mantener proporción</label>
+                        </div>
+                        <button class="btn-primary btn-full" id="applyManualRes">Aplicar Resolución</button>
+                    </div>
+                </div>
+
+                <!-- Convert Format Panel -->
+                <div class="panel" id="panelConvert" hidden>
+                    <div class="panel-header">
+                        <h3>Convertir Formato</h3>
+                        <button class="panel-close" data-close>×</button>
+                    </div>
+                    <div class="panel-content">
+                        <p class="panel-desc">Selecciona el formato de salida:</p>
+                        <div class="format-options">
+                            <button class="format-btn" data-format="png">
+                                <span class="format-icon">🖼️</span>
+                                <span class="format-name">PNG</span>
+                                <span class="format-desc">Sin pérdida, transparencia</span>
+                            </button>
+                            <button class="format-btn" data-format="jpeg">
+                                <span class="format-icon">📷</span>
+                                <span class="format-name">JPG</span>
+                                <span class="format-desc">Comprimido, ideal para fotos</span>
+                            </button>
+                            <button class="format-btn" data-format="webp">
+                                <span class="format-icon">🌐</span>
+                                <span class="format-name">WEBP</span>
+                                <span class="format-desc">Moderno, mejor compresión</span>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Editor Panel -->
+                <div class="panel" id="panelEditor" hidden>
+                    <div class="panel-header">
+                        <h3>Editor de Imagen</h3>
+                        <button class="panel-close" data-close>×</button>
+                    </div>
+                    <div class="panel-content">
+                        <p class="panel-desc">Edita la capa seleccionada:</p>
+                        <button class="editor-btn" data-editor="move">
+                            <span class="editor-icon">✋</span>
+                            <span class="editor-label">Mover Capa</span>
+                        </button>
+                        <button class="editor-btn" data-editor="crop">
+                            <span class="editor-icon">✂️</span>
+                            <span class="editor-label">Recortar Capa</span>
+                        </button>
+                        <button class="editor-btn" data-editor="cropAll">
+                            <span class="editor-icon">🔲</span>
+                            <span class="editor-label">Recortar Todas las Capas</span>
+                        </button>
+
+                        <button class="editor-btn" data-editor="text">
+                            <span class="editor-icon">📝</span>
+                            <span class="editor-label">Agregar Texto (Nueva Capa)</span>
+                        </button>
+                        <button class="editor-btn" data-editor="overlay">
+                            <span class="editor-icon">🎴</span>
+                            <span class="editor-label">Insertar Imagen (Nueva Capa)</span>
+                        </button>
+                        <button class="editor-btn" data-editor="rotate">
+                            <span class="editor-icon">🔄</span>
+                            <span class="editor-label">Rotar Capa</span>
+                        </button>
+                        <button class="editor-btn" data-editor="flip">
+                            <span class="editor-icon">↔️</span>
+                            <span class="editor-label">Voltear Capa</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Crop Sub-Panel (Interactive) -->
+                <div class="panel sub-panel" id="panelCrop" hidden>
+                    <div class="panel-header">
+                        <h3>✂️ Recortar Capa</h3>
+                        <button class="panel-close" data-close>×</button>
+                    </div>
+                    <div class="panel-content">
+                        <div class="instruction-box">
+                            <p>🖱️ <strong>Instrucciones:</strong></p>
+                            <p>1. Haz clic y arrastra para seleccionar el área</p>
+                            <p>2. Usa las esquinas para redimensionar</p>
+                            <p>3. Solo recorta la capa seleccionada</p>
+                        </div>
+                        <div class="crop-info" id="cropInfo">
+                            <span>Selección: <strong id="cropDimensions">-</strong></span>
+                        </div>
+                        <button class="btn-primary btn-full" id="applyCrop">✂️ Aplicar Recorte</button>
+                        <button class="btn-secondary btn-full" id="cancelCrop">Cancelar</button>
+                    </div>
+                </div>
+
+                <!-- Text Sub-Panel (Interactive) -->
+                <div class="panel sub-panel" id="panelText" hidden>
+                    <div class="panel-header">
+                        <h3>📝 Agregar Texto</h3>
+                        <button class="panel-close" data-close>×</button>
+                    </div>
+                    <div class="panel-content">
+                        <div class="instruction-box">
+                            <p>🖱️ <strong>Instrucciones:</strong></p>
+                            <p>1. Escribe tu texto abajo</p>
+                            <p>2. Arrastra el texto sobre la imagen</p>
+                            <p>3. Se creará una nueva capa de texto</p>
+                        </div>
+                        <div class="input-group">
+                            <label for="textContent">Texto:</label>
+                            <input type="text" id="textContent" placeholder="Escribe tu texto aquí" value="Tu Texto">
+                        </div>
+                        <div class="input-group">
+                            <label for="textSize">Tamaño: <span id="textSizeValue">32</span>px</label>
+                            <input type="range" id="textSize" value="32" min="12" max="200">
+                        </div>
+                        <div class="input-group">
+                            <label for="textColor">Color:</label>
+                            <input type="color" id="textColor" value="#ffffff">
+                        </div>
+                        <div class="input-group">
+                            <label for="textFont">Fuente:</label>
+                            <select id="textFont">
+                                <option value="Arial">Arial</option>
+                                <option value="Outfit">Outfit</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Courier New">Courier New</option>
+                                <option value="Impact">Impact</option>
+                            </select>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="textBold">
+                            <label for="textBold">Negrita</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="textShadow">
+                            <label for="textShadow">Sombra</label>
+                        </div>
+                        <button class="btn-primary btn-full" id="applyText">📝 Crear Capa de Texto</button>
+                        <button class="btn-secondary btn-full" id="cancelText">Cancelar</button>
+                    </div>
+                </div>
+
+                <!-- Overlay Sub-Panel (Interactive) -->
+                <div class="panel sub-panel" id="panelOverlay" hidden>
+                    <div class="panel-header">
+                        <h3>🎴 Insertar Imagen</h3>
+                        <button class="panel-close" data-close>×</button>
+                    </div>
+                    <div class="panel-content">
+                        <div class="drop-zone-small" id="overlayDropZone">
+                            <span>📁 Seleccionar imagen</span>
+                            <input type="file" id="overlayInput" accept="image/*" hidden>
+                        </div>
+                        <div class="instruction-box" id="overlayInstructions" hidden>
+                            <p>🖱️ <strong>Instrucciones:</strong></p>
+                            <p>1. Arrastra la imagen para posicionarla</p>
+                            <p>2. Se creará una nueva capa</p>
+                        </div>
+                        <div class="input-group">
+                            <label for="overlayOpacity">Opacidad: <span id="opacityValue">100</span>%</label>
+                            <input type="range" id="overlayOpacity" min="10" max="100" value="100">
+                        </div>
+                        <button class="btn-primary btn-full" id="applyOverlay" disabled>🎴 Crear Capa de Imagen</button>
+                        <button class="btn-secondary btn-full" id="cancelOverlay">Cancelar</button>
+                    </div>
+                </div>
+
+                <!-- Rotate Sub-Panel -->
+                <div class="panel sub-panel" id="panelRotate" hidden>
+                    <div class="panel-header">
+                        <h3>Rotar Capa</h3>
+                        <button class="panel-close" data-close>×</button>
+                    </div>
+                    <div class="panel-content">
+                        <div class="rotate-options">
+                            <button class="rotate-btn" data-rotate="90">↻ 90°</button>
+                            <button class="rotate-btn" data-rotate="-90">↺ -90°</button>
+                            <button class="rotate-btn" data-rotate="180">↻ 180°</button>
+                        </div>
+                        <div class="input-group">
+                            <label for="customRotate">Rotación personalizada:</label>
+                            <input type="number" id="customRotate" value="0" min="-360" max="360">
+                            <button class="btn-primary" id="applyCustomRotate">Aplicar</button>
+                        </div>
+                        <button class="btn-secondary btn-full" data-back-editor>← Volver</button>
+                    </div>
+                </div>
+
+                <!-- Flip Sub-Panel -->
+                <div class="panel sub-panel" id="panelFlip" hidden>
+                    <div class="panel-header">
+                        <h3>Voltear Capa</h3>
+                        <button class="panel-close" data-close>×</button>
+                    </div>
+                    <div class="panel-content">
+                        <button class="flip-btn" data-flip="horizontal">↔️ Voltear Horizontal</button>
+                        <button class="flip-btn" data-flip="vertical">↕️ Voltear Vertical</button>
+                        <button class="btn-secondary btn-full" data-back-editor>← Volver</button>
+                    </div>
+                </div>
+
+
+
+                <!-- Download Button -->
+                <div class="download-section" id="downloadSection" hidden>
+                    <button class="btn-download" id="btnDownload">
+                        <span>💾</span> Guardar Imagen
+                    </button>
+                </div>
+            </aside>
+        </main>
+
+        <!-- Toast Notifications -->
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
