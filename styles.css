@@ -291,9 +291,13 @@ body {
 .canvas-content {
     position: relative;
     display: none;
-    max-width: 100%;
-    max-height: 100%;
+    /* 
+     * CRITICAL: Canvas display size depends ONLY on aspect ratio, not resolution.
+     * Same aspect ratio = same visual size (e.g., 900x900 and 300x300 look identical)
+     * Different aspect ratio = different shape, but still maximized
+     */
     box-shadow: var(--shadow-lg);
+    /* Aspect ratio is set dynamically by JavaScript based on canvasWidth/canvasHeight */
 }
 
 .canvas-container.has-image {
@@ -303,6 +307,7 @@ body {
 
 .canvas-container.has-image .canvas-content {
     display: block;
+    /* The container sizes itself based on the canvas which fills it */
 }
 
 /* Zoom Controls in Footer */
@@ -350,6 +355,9 @@ body {
 #mainCanvas {
     display: none;
     border-radius: var(--radius-md);
+    /* Canvas fills available space, aspect ratio maintained by object-fit */
+    width: 100%;
+    height: 100%;
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
@@ -1509,16 +1517,16 @@ body {
     margin-left: 0.5rem;
 }
 
-/* Checkered background for transparency on main canvas */
+/* Checkered background for transparency - HIGHLY VISIBLE */
 #mainCanvas {
-    background-color: #1f1f28;
+    background-color: #444455;
     background-image:
-        linear-gradient(45deg, #2a2a35 25%, transparent 25%),
-        linear-gradient(-45deg, #2a2a35 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #2a2a35 75%),
-        linear-gradient(-45deg, transparent 75%, #2a2a35 75%);
-    background-size: 20px 20px;
-    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        linear-gradient(45deg, #666677 25%, transparent 25%),
+        linear-gradient(-45deg, #666677 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #666677 75%),
+        linear-gradient(-45deg, transparent 75%, #666677 75%);
+    background-size: 32px 32px;
+    background-position: 0 0, 0 16px, 16px -16px, -16px 0px;
 }
 
 /* ========================================
@@ -1531,11 +1539,11 @@ body {
     inset: 0;
     pointer-events: none;
     background-image:
-        linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        linear-gradient(to right, rgba(255, 255, 255, 0.25) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.25) 1px, transparent 1px);
     background-size: 50px 50px;
-    z-index: 35;
-    /* Below interactive layer (40), but clearly above content */
+    z-index: 5;
+    /* Lower z-index so it's behind panels/controls but visible over background */
 }
 
 /* Menu Divider */

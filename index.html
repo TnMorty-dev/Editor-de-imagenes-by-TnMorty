@@ -64,15 +64,15 @@
                         <span class="menu-text">Cuadrícula</span>
                         <span class="menu-toggle-icon" id="iconGrid">⬜</span>
                     </button>
-                    <button class="menu-item active" data-action="toggle-snap" id="btnToggleSnap">
+                    <button class="menu-item" data-action="toggle-snap" id="btnToggleSnap">
                         <span class="menu-number">🧲</span>
                         <span class="menu-text">Autocolocado</span>
                         <span class="menu-toggle-icon" id="iconSnap">✅</span>
                     </button>
-                    <button class="menu-item active" data-action="toggle-deform" id="btnToggleDeform">
+                    <button class="menu-item" data-action="toggle-deform" id="btnToggleDeform">
                         <span class="menu-number">🔓</span>
                         <span class="menu-text">Deformar</span>
-                        <span class="menu-toggle-icon" id="iconDeform">ON</span>
+                        <span class="menu-toggle-icon" id="iconDeform">OFF</span>
                     </button>
                     <button class="menu-item menu-item-exit" data-action="exit" id="btnExit">
                         <span class="menu-number">5</span>
@@ -89,6 +89,9 @@
             <!-- Canvas Area -->
             <section class="canvas-area">
                 <div class="canvas-container" id="canvasContainer">
+                    <!-- Grid Overlay (Moved here to cover full container) -->
+                    <div id="gridOverlay" class="grid-overlay" hidden></div>
+
                     <div class="drop-zone" id="dropZone">
                         <div class="drop-content">
                             <span class="drop-icon">🖼️</span>
@@ -101,7 +104,8 @@
                     <!-- Content Wrapper for Zoom -->
                     <div class="canvas-content" id="canvasContent">
                         <canvas id="mainCanvas"></canvas>
-                        <div id="gridOverlay" class="grid-overlay" hidden></div>
+                        <!-- Grid Overlay was here -->
+                        <!-- Interactive elements overlay -->
                         <!-- Interactive elements overlay -->
                         <div class="interactive-layer" id="interactiveLayer" hidden>
                             <!-- Move selection box -->
@@ -135,6 +139,8 @@
                     <span id="imageSize">Sin imagen</span>
                     <span class="separator">|</span>
                     <span id="imageFormat">-</span>
+                    <span class="separator">|</span>
+                    <span class="edit-mode-badge" id="editMode" hidden></span>
                 </div>
             </section>
 

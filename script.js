@@ -127,7 +127,7 @@ const state = {
     view: {
         grid: false,
         snap: true,
-        deform: true
+        deform: false
     },
 
     // Move layer state
@@ -317,7 +317,6 @@ function setupEventListeners() {
                 case 'move': enterMoveMode(); break;
                 case 'crop': enterCropModeV2(false); showPanel('panelCrop'); break;
                 case 'cropAll': enterCropModeV2(true); showPanel('panelCrop'); break;
-                // removeBg removed
                 case 'text': enterTextMode(); showPanel('panelText'); break;
                 case 'overlay': showPanel('panelOverlay'); break;
                 case 'rotate': showPanel('panelRotate'); break;
@@ -478,6 +477,134 @@ function deleteSelectedLayer() {
     }
 }
 
+// ============================================
+// New Layer Tools
+// ============================================
+function duplicateLayer() {
+    const layer = getSelectedLayer();
+    if (!layer) return;
+
+    const id = ++state.layerIdCounter;
+    const newLayer = new Layer(id, layer.name + ' (copia)', layer.type);
+    newLayer.setSize(layer.width, layer.height);
+    newLayer.ctx.drawImage(layer.canvas, 0, 0);
+    newLayer.x = layer.x + 20; // Offset slightly
+    newLayer.y = layer.y + 20;
+    newLayer.opacity = layer.opacity;
+
+    state.layers.push(newLayer);
+    state.selectedLayerId = id;
+
+    saveHistory('Duplicar capa', '📋');
+    renderLayersPanel();
+    renderCanvas();
+    showToast('Capa duplicada', 'success');
+}
+
+function centerLayer() {
+    const layer = getSelectedLayer();
+    if (!layer) return;
+
+    layer.x = Math.round((state.canvasWidth - layer.width) / 2);
+    layer.y = Math.round((state.canvasHeight - layer.height) / 2);
+
+    saveHistory('Centrar capa', '⊕');
+    renderCanvas();
+    showToast('Capa centrada', 'success');
+}
+
+function fitLayerToCanvas() {
+    const layer = getSelectedLayer();
+    if (!layer || layer.width === 0 || layer.height === 0) return;
+
+    // Create snapshot
+    const snapshot = document.createElement('canvas');
+    snapshot.width = layer.width;
+    snapshot.height = layer.height;
+    snapshot.getContext('2d').drawImage(layer.canvas, 0, 0);
+
+    // Resize layer to canvas size
+    layer.setSize(state.canvasWidth, state.canvasHeight);
+    layer.ctx.drawImage(snapshot, 0, 0, state.canvasWidth, state.canvasHeight);
+    layer.x = 0;
+    layer.y = 0;
+
+    saveHistory('Ajustar capa al canvas', '⛶');
+    renderCanvas();
+    showToast('Capa ajustada al canvas', 'success');
+}
+
+function applyFilter(filterType) {
+    const layer = getSelectedLayer();
+    if (!layer || layer.width === 0 || layer.height === 0) return;
+
+    const imageData = layer.ctx.getImageData(0, 0, layer.width, layer.height);
+    const data = imageData.data;
+
+    switch (filterType) {
+        case 'grayscale':
+            for (let i = 0; i < data.length; i += 4) {
+                const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                data[i] = data[i + 1] = data[i + 2] = avg;
+            }
+            break;
+        case 'sepia':
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i], g = data[i + 1], b = data[i + 2];
+                data[i] = Math.min(255, r * 0.393 + g * 0.769 + b * 0.189);
+                data[i + 1] = Math.min(255, r * 0.349 + g * 0.686 + b * 0.168);
+                data[i + 2] = Math.min(255, r * 0.272 + g * 0.534 + b * 0.131);
+            }
+            break;
+        case 'invert':
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = 255 - data[i];
+                data[i + 1] = 255 - data[i + 1];
+                data[i + 2] = 255 - data[i + 2];
+            }
+            break;
+        case 'blur':
+            // Simple box blur (3x3)
+            const tempData = new Uint8ClampedArray(data);
+            const w = layer.width;
+            for (let y = 1; y < layer.height - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                    for (let c = 0; c < 3; c++) {
+                        let sum = 0;
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                sum += tempData[((y + dy) * w + (x + dx)) * 4 + c];
+                            }
+                        }
+                        data[(y * w + x) * 4 + c] = sum / 9;
+                    }
+                }
+            }
+            break;
+        case 'brightness':
+            const brightnessAmount = 30;
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = Math.min(255, data[i] + brightnessAmount);
+                data[i + 1] = Math.min(255, data[i + 1] + brightnessAmount);
+                data[i + 2] = Math.min(255, data[i + 2] + brightnessAmount);
+            }
+            break;
+        case 'contrast':
+            const factor = 1.3; // 30% more contrast
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = Math.min(255, Math.max(0, (data[i] - 128) * factor + 128));
+                data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * factor + 128));
+                data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * factor + 128));
+            }
+            break;
+    }
+
+    layer.ctx.putImageData(imageData, 0, 0);
+    saveHistory(`Filtro: ${filterType}`, '🎨');
+    renderCanvas();
+    showToast(`Filtro ${filterType} aplicado`, 'success');
+}
+
 function toggleLayerVisibility(id) {
     const layer = state.layers.find(l => l.id === id);
     if (layer) {
@@ -601,6 +728,28 @@ function renderCanvas() {
 
 
 function resizeCanvas(width, height) {
+    const scaleX = width / state.canvasWidth;
+    const scaleY = height / state.canvasHeight;
+
+    // Scale all layers proportionally
+    state.layers.forEach(layer => {
+        if (layer.width > 0 && layer.height > 0) {
+            // Create snapshot of current content
+            const snapshot = document.createElement('canvas');
+            snapshot.width = layer.width;
+            snapshot.height = layer.height;
+            snapshot.getContext('2d').drawImage(layer.canvas, 0, 0);
+
+            // Calculate new dimensions and position
+            const newW = Math.round(layer.width * scaleX);
+            const newH = Math.round(layer.height * scaleY);
+            layer.x = Math.round(layer.x * scaleX);
+            layer.y = Math.round(layer.y * scaleY);
+            layer.setSize(newW, newH);
+            layer.ctx.drawImage(snapshot, 0, 0, newW, newH);
+        }
+    });
+
     state.canvasWidth = width;
     state.canvasHeight = height;
 
@@ -814,9 +963,9 @@ function setupInteractiveEvents() {
     const container = elements.canvasContainer;
 
     container.addEventListener('mousedown', handleMouseDown);
-    container.addEventListener('mousemove', handleMouseMove);
-    container.addEventListener('mouseup', handleMouseUp);
-    container.addEventListener('mouseleave', handleMouseUp);
+    // Use document for move/up to allow dragging outside canvas bounds
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
 
     elements.cropBox.addEventListener('mousedown', handleCropBoxMouseDown);
     document.querySelectorAll('.crop-handle').forEach(handle => {
@@ -871,19 +1020,15 @@ function enterCropMode() {
 }
 
 function updateCropBox() {
-    const canvasRect = elements.canvas.getBoundingClientRect();
+    // state.crop.x/y/width/height are now percentages (0-100)
+    elements.cropBox.style.left = state.crop.x + '%';
+    elements.cropBox.style.top = state.crop.y + '%';
+    elements.cropBox.style.width = state.crop.width + '%';
+    elements.cropBox.style.height = state.crop.height + '%';
 
-    // Percentage positioning to withstand zoom resize
-    elements.cropBox.style.left = (state.crop.x / canvasRect.width * 100) + '%';
-    elements.cropBox.style.top = (state.crop.y / canvasRect.height * 100) + '%';
-    elements.cropBox.style.width = (state.crop.width / canvasRect.width * 100) + '%';
-    elements.cropBox.style.height = (state.crop.height / canvasRect.height * 100) + '%';
-
-    const scaleX = state.canvasWidth / canvasRect.width;
-    const scaleY = state.canvasHeight / canvasRect.height;
-
-    const realWidth = Math.round(state.crop.width * scaleX);
-    const realHeight = Math.round(state.crop.height * scaleY);
+    // Calculate real pixel dimensions for display
+    const realWidth = Math.round(state.crop.width / 100 * state.canvasWidth);
+    const realHeight = Math.round(state.crop.height / 100 * state.canvasHeight);
     elements.cropDimensions.textContent = `${realWidth} × ${realHeight} px`;
 }
 
@@ -891,8 +1036,10 @@ function handleCropBoxMouseDown(e) {
     if (state.editMode !== 'crop' || e.target.classList.contains('crop-handle')) return;
     e.preventDefault();
     state.crop.dragging = true;
-    state.crop.startX = e.clientX - state.crop.x;
-    state.crop.startY = e.clientY - state.crop.y;
+    state.crop.startMouseX = e.clientX;
+    state.crop.startMouseY = e.clientY;
+    state.crop.startCropX = state.crop.x;
+    state.crop.startCropY = state.crop.y;
 }
 
 function handleCropHandleMouseDown(e) {
@@ -901,8 +1048,12 @@ function handleCropHandleMouseDown(e) {
     e.stopPropagation();
     state.crop.resizing = true;
     state.crop.resizeHandle = e.target.dataset.handle;
-    state.crop.startX = e.clientX;
-    state.crop.startY = e.clientY;
+    state.crop.startMouseX = e.clientX;
+    state.crop.startMouseY = e.clientY;
+    state.crop.startCropX = state.crop.x;
+    state.crop.startCropY = state.crop.y;
+    state.crop.startCropW = state.crop.width;
+    state.crop.startCropH = state.crop.height;
 }
 
 function handleMouseDown(e) {
@@ -917,17 +1068,18 @@ function handleMouseDown(e) {
     if (state.editMode !== 'crop') return;
     if (e.target !== elements.canvasContainer && e.target !== elements.interactiveLayer && e.target !== elements.canvas) return;
 
-    const containerRect = elements.canvasContainer.getBoundingClientRect();
-    const x = e.clientX - containerRect.left;
-    const y = e.clientY - containerRect.top;
+    const canvasRect = elements.canvas.getBoundingClientRect();
+    // Convert to percentage
+    const xPct = ((e.clientX - canvasRect.left) / canvasRect.width) * 100;
+    const yPct = ((e.clientY - canvasRect.top) / canvasRect.height) * 100;
 
     state.crop.active = true;
-    state.crop.x = x;
-    state.crop.y = y;
+    state.crop.x = Math.max(0, Math.min(100, xPct));
+    state.crop.y = Math.max(0, Math.min(100, yPct));
     state.crop.width = 0;
     state.crop.height = 0;
-    state.crop.startX = x;
-    state.crop.startY = y;
+    state.crop.startCropX = state.crop.x;
+    state.crop.startCropY = state.crop.y;
 
     updateCropBox();
 }
@@ -940,64 +1092,66 @@ function handleMouseMove(e) {
 }
 
 function handleCropMouseMove(e) {
-    const containerRect = elements.canvasContainer.getBoundingClientRect();
     const canvasRect = elements.canvas.getBoundingClientRect();
 
-    // Calculate canvas bounds within container
-    const canvasLeft = canvasRect.left - containerRect.left;
-    const canvasTop = canvasRect.top - containerRect.top;
-    const canvasRight = canvasLeft + canvasRect.width;
-    const canvasBottom = canvasTop + canvasRect.height;
-
     if (state.crop.active) {
-        const x = e.clientX - containerRect.left;
-        const y = e.clientY - containerRect.top;
-        state.crop.width = Math.abs(x - state.crop.startX);
-        state.crop.height = Math.abs(y - state.crop.startY);
-        state.crop.x = Math.min(x, state.crop.startX);
-        state.crop.y = Math.min(y, state.crop.startY);
-        // Constrain to canvas area
-        state.crop.x = Math.max(canvasLeft, state.crop.x);
-        state.crop.y = Math.max(canvasTop, state.crop.y);
-        state.crop.width = Math.min(state.crop.width, canvasRight - state.crop.x);
-        state.crop.height = Math.min(state.crop.height, canvasBottom - state.crop.y);
+        // Drawing new crop box - convert to percentage
+        const xPct = Math.max(0, Math.min(100, ((e.clientX - canvasRect.left) / canvasRect.width) * 100));
+        const yPct = Math.max(0, Math.min(100, ((e.clientY - canvasRect.top) / canvasRect.height) * 100));
+
+        state.crop.x = Math.min(xPct, state.crop.startCropX);
+        state.crop.y = Math.min(yPct, state.crop.startCropY);
+        state.crop.width = Math.abs(xPct - state.crop.startCropX);
+        state.crop.height = Math.abs(yPct - state.crop.startCropY);
         updateCropBox();
     } else if (state.crop.dragging) {
-        let newX = e.clientX - state.crop.startX;
-        let newY = e.clientY - state.crop.startY;
-        // Constrain to canvas area
-        newX = Math.max(canvasLeft, Math.min(newX, canvasRight - state.crop.width));
-        newY = Math.max(canvasTop, Math.min(newY, canvasBottom - state.crop.height));
+        // Dragging crop box - calculate delta in percentage
+        const dxPct = ((e.clientX - state.crop.startMouseX) / canvasRect.width) * 100;
+        const dyPct = ((e.clientY - state.crop.startMouseY) / canvasRect.height) * 100;
+
+        let newX = state.crop.startCropX + dxPct;
+        let newY = state.crop.startCropY + dyPct;
+
+        // Constrain to canvas
+        newX = Math.max(0, Math.min(100 - state.crop.width, newX));
+        newY = Math.max(0, Math.min(100 - state.crop.height, newY));
+
         state.crop.x = newX;
         state.crop.y = newY;
         updateCropBox();
     } else if (state.crop.resizing) {
-        const dx = e.clientX - state.crop.startX;
-        const dy = e.clientY - state.crop.startY;
+        // Resizing - calculate delta in percentage
+        const dxPct = ((e.clientX - state.crop.startMouseX) / canvasRect.width) * 100;
+        const dyPct = ((e.clientY - state.crop.startMouseY) / canvasRect.height) * 100;
+        const minSize = 5; // Minimum 5% size
+
         switch (state.crop.resizeHandle) {
             case 'se':
-                state.crop.width = Math.max(50, state.crop.width + dx);
-                state.crop.height = Math.max(50, state.crop.height + dy);
+                state.crop.width = Math.max(minSize, state.crop.startCropW + dxPct);
+                state.crop.height = Math.max(minSize, state.crop.startCropH + dyPct);
                 break;
             case 'sw':
-                state.crop.x += dx;
-                state.crop.width = Math.max(50, state.crop.width - dx);
-                state.crop.height = Math.max(50, state.crop.height + dy);
+                state.crop.x = state.crop.startCropX + dxPct;
+                state.crop.width = Math.max(minSize, state.crop.startCropW - dxPct);
+                state.crop.height = Math.max(minSize, state.crop.startCropH + dyPct);
                 break;
             case 'ne':
-                state.crop.y += dy;
-                state.crop.width = Math.max(50, state.crop.width + dx);
-                state.crop.height = Math.max(50, state.crop.height - dy);
+                state.crop.y = state.crop.startCropY + dyPct;
+                state.crop.width = Math.max(minSize, state.crop.startCropW + dxPct);
+                state.crop.height = Math.max(minSize, state.crop.startCropH - dyPct);
                 break;
             case 'nw':
-                state.crop.x += dx;
-                state.crop.y += dy;
-                state.crop.width = Math.max(50, state.crop.width - dx);
-                state.crop.height = Math.max(50, state.crop.height - dy);
+                state.crop.x = state.crop.startCropX + dxPct;
+                state.crop.y = state.crop.startCropY + dyPct;
+                state.crop.width = Math.max(minSize, state.crop.startCropW - dxPct);
+                state.crop.height = Math.max(minSize, state.crop.startCropH - dyPct);
                 break;
         }
-        state.crop.startX = e.clientX;
-        state.crop.startY = e.clientY;
+        // Constrain to canvas bounds
+        state.crop.x = Math.max(0, state.crop.x);
+        state.crop.y = Math.max(0, state.crop.y);
+        if (state.crop.x + state.crop.width > 100) state.crop.width = 100 - state.crop.x;
+        if (state.crop.y + state.crop.height > 100) state.crop.height = 100 - state.crop.y;
         updateCropBox();
     }
 }
@@ -1022,35 +1176,25 @@ function handleMouseUp() {
 }
 
 function applyCrop() {
-    // Single layer validation
+    // Validate minimum size (5% minimum)
     if (!state.cropAllMode) {
         const layer = getSelectedLayer();
-        if (!layer || state.crop.width < 10 || state.crop.height < 10) {
+        if (!layer || state.crop.width < 5 || state.crop.height < 5) {
             showToast('Selecciona un área válida', 'error');
             return;
         }
     } else {
-        if (state.crop.width < 10 || state.crop.height < 10) {
+        if (state.crop.width < 5 || state.crop.height < 5) {
             showToast('Selecciona un área válida', 'error');
             return;
         }
     }
 
-    const containerRect = elements.canvasContainer.getBoundingClientRect();
-    const canvasRect = elements.canvas.getBoundingClientRect();
-
-    // Calculate canvas offset within container
-    const canvasOffsetX = canvasRect.left - containerRect.left;
-    const canvasOffsetY = canvasRect.top - containerRect.top;
-
-    const scaleX = state.canvasWidth / canvasRect.width;
-    const scaleY = state.canvasHeight / canvasRect.height;
-
-    // Convert crop box position (container coords) to canvas coords
-    const canvasCropX = (state.crop.x - canvasOffsetX) * scaleX;
-    const canvasCropY = (state.crop.y - canvasOffsetY) * scaleY;
-    const canvasCropWidth = state.crop.width * scaleX;
-    const canvasCropHeight = state.crop.height * scaleY;
+    // Convert percentages to actual canvas pixel coordinates
+    const canvasCropX = (state.crop.x / 100) * state.canvasWidth;
+    const canvasCropY = (state.crop.y / 100) * state.canvasHeight;
+    const canvasCropWidth = (state.crop.width / 100) * state.canvasWidth;
+    const canvasCropHeight = (state.crop.height / 100) * state.canvasHeight;
 
     if (state.cropAllMode) {
         // CROP ALL: Change canvas size and shift all layers
@@ -1467,6 +1611,7 @@ function exitEditMode() {
     elements.cropBox.hidden = true;
     elements.draggableText.hidden = true;
     elements.draggableOverlay.hidden = true;
+    elements.moveBox.hidden = true;
 }
 
 // ============================================
@@ -1878,34 +2023,24 @@ function enterCropModeV2(cropAll = false) {
     elements.editMode.hidden = false;
     elements.editMode.textContent = cropAll ? '🔲 Recortar Todo' : '✂️ Recortar Capa';
 
-    // Get canvas position within container
-    const containerRect = elements.canvasContainer.getBoundingClientRect();
-    const canvasRect = elements.canvas.getBoundingClientRect();
-
-    // Calculate offset of canvas within container
-    state.crop.offsetX = canvasRect.left - containerRect.left;
-    state.crop.offsetY = canvasRect.top - containerRect.top;
-
-    const scaleX = canvasRect.width / state.canvasWidth;
-    const scaleY = canvasRect.height / state.canvasHeight;
-
-    let boxWidth, boxHeight;
-
+    // Use percentage-based coordinates (0-100) relative to canvas
+    // This makes positioning independent of viewport/container size
     if (cropAll) {
-        // Init full size crop box slightly smaller than canvas
-        boxWidth = state.canvasWidth * scaleX * 0.9;
-        boxHeight = state.canvasHeight * scaleY * 0.9;
+        // Init crop box at 90% of canvas, centered
+        state.crop.x = 5;   // 5% from left
+        state.crop.y = 5;   // 5% from top
+        state.crop.width = 90;  // 90% width
+        state.crop.height = 90; // 90% height
     } else {
         const layer = getSelectedLayer();
-        // Initialize crop box centered on canvas (display coordinates)
-        boxWidth = Math.min(layer.width, state.canvasWidth) * scaleX * 0.6;
-        boxHeight = Math.min(layer.height, state.canvasHeight) * scaleY * 0.6;
+        // Initialize crop box at 60% of layer/canvas size, centered
+        const boxWidthPct = Math.min(layer.width / state.canvasWidth, 1) * 60;
+        const boxHeightPct = Math.min(layer.height / state.canvasHeight, 1) * 60;
+        state.crop.x = (100 - boxWidthPct) / 2;
+        state.crop.y = (100 - boxHeightPct) / 2;
+        state.crop.width = boxWidthPct;
+        state.crop.height = boxHeightPct;
     }
-
-    state.crop.x = state.crop.offsetX + (canvasRect.width - boxWidth) / 2;
-    state.crop.y = state.crop.offsetY + (canvasRect.height - boxHeight) / 2;
-    state.crop.width = boxWidth;
-    state.crop.height = boxHeight;
 
     updateCropBox();
     elements.cropBox.hidden = false;
@@ -1973,13 +2108,46 @@ function setupZoomEvents() {
     });
 }
 
-// These functions are kept for compatibility but simplified
+// ============================================
+// Fit to Screen - Maximize canvas display based on ASPECT RATIO only
+// Same aspect ratio = same visual size (e.g., 900x900 and 300x300 look identical)
+// ============================================
 function fitToScreen() {
-    // No-op: CSS handles responsive sizing
+    if (!elements.canvasContainer || !elements.canvasContent) return;
+
+    // Get available space in container (with 10% margin)
+    const containerRect = elements.canvasContainer.getBoundingClientRect();
+    const maxWidth = containerRect.width * 0.9;
+    const maxHeight = containerRect.height * 0.9;
+
+    // Calculate aspect ratio
+    const aspectRatio = state.canvasWidth / state.canvasHeight;
+
+    let displayWidth, displayHeight;
+
+    // Calculate size that maximizes while maintaining aspect ratio
+    if (maxWidth / maxHeight > aspectRatio) {
+        // Container is wider than aspect ratio - height is the constraint
+        displayHeight = maxHeight;
+        displayWidth = maxHeight * aspectRatio;
+    } else {
+        // Container is taller than aspect ratio - width is the constraint
+        displayWidth = maxWidth;
+        displayHeight = maxWidth / aspectRatio;
+    }
+
+    // Apply the calculated size to canvas-content
+    elements.canvasContent.style.width = displayWidth + 'px';
+    elements.canvasContent.style.height = displayHeight + 'px';
 }
 
 function applyZoom() {
-    // No-op: CSS handles responsive sizing  
+    // Just calls fitToScreen for compatibility
+    fitToScreen();
 }
+
+// Re-fit on window resize
+window.removeEventListener('resize', fitToScreen);
+window.addEventListener('resize', fitToScreen);
 
 
