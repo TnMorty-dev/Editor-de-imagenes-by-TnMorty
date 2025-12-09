@@ -1670,3 +1670,105 @@ body {
     text-decoration: none;
     box-shadow: 0 0 10px rgba(100, 108, 255, 0.4);
 }
+
+/* ========================================
+   Mobile Adaptation
+   ======================================== */
+@media (max-width: 1024px) {
+    body {
+        height: auto;
+        overflow: auto;
+        /* Enable scrolling */
+    }
+
+    .app-container {
+        height: auto;
+        overflow: visible;
+    }
+
+    .main-content {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+    }
+
+    /* Sidebar becomes a top navigation bar or stacked block */
+    .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 1rem;
+        height: auto;
+    }
+
+    .menu-nav {
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+        gap: 0.5rem;
+    }
+
+    .menu-item {
+        white-space: nowrap;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .sidebar-footer,
+    .menu-header {
+        display: none;
+        /* Hide header/footer to save space */
+    }
+
+    .menu-item-exit {
+        margin-top: 0;
+        margin-left: auto;
+    }
+
+    /* Canvas Area */
+    .canvas-area {
+        height: 60vh;
+        min-height: 400px;
+        padding: 1rem;
+    }
+
+    /* Right Panel Area */
+    .panel-area {
+        width: 100%;
+        height: auto;
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+        padding-bottom: 2rem;
+    }
+
+    .panel {
+        height: auto;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .history-panel {
+        border-top: 1px solid var(--border-color);
+        /* Separate panels */
+    }
+
+    /* Adjust Tool Panels */
+    /* Tool Panels (Bottom Sheet) */
+    .panel:not(#panelLayers):not(#panelHistory) {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        top: auto;
+        border-radius: 20px 20px 0 0;
+        max-height: 60vh;
+        z-index: 1000;
+        border: 1px solid var(--border-color);
+        border-bottom: none;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.7);
+        background: var(--bg-secondary);
+        backdrop-filter: blur(20px);
+        padding: 1.5rem;
+        margin: 0;
+    }
+}
