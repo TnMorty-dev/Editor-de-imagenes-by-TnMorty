@@ -232,20 +232,37 @@ function init() {
 // ============================================
 // Event Listeners
 // ============================================
+let fileInputBlocked = false; // Debounce flag
+
+function triggerFileInput() {
+    if (fileInputBlocked) return;
+    fileInputBlocked = true;
+    elements.fileInput.click();
+    // Unblock after 500ms
+    setTimeout(() => { fileInputBlocked = false; }, 500);
+}
+
 function setupEventListeners() {
     // File handling
     elements.fileInput.addEventListener('change', handleFileSelect);
-    elements.dropZone.addEventListener('click', () => elements.fileInput.click());
+    elements.dropZone.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerFileInput();
+    });
     elements.dropZone.addEventListener('dragover', handleDragOver);
     elements.dropZone.addEventListener('dragleave', handleDragLeave);
     elements.dropZone.addEventListener('drop', handleDrop);
 
     // Menu buttons
-    document.getElementById('btnLoad').addEventListener('click', () => elements.fileInput.click());
+    document.getElementById('btnLoad').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerFileInput();
+    });
     document.getElementById('btnPresetRes').addEventListener('click', () => showPanel('panelPresetRes'));
     document.getElementById('btnManualRes').addEventListener('click', () => showPanel('panelManualRes'));
     document.getElementById('btnConvert').addEventListener('click', () => showPanel('panelConvert'));
-    document.getElementById('btnEditor').addEventListener('click', () => showPanel('panelEditor'));
     document.getElementById('btnEditor').addEventListener('click', () => showPanel('panelEditor'));
     document.getElementById('btnExit').addEventListener('click', resetEditor);
 
@@ -255,6 +272,22 @@ function setupEventListeners() {
     }
     if (elements.sidebarOverlay) {
         elements.sidebarOverlay.addEventListener('click', closeSidebar);
+    }
+
+    // Sidebar Close Button (mobile)
+    const btnCloseSidebar = document.getElementById('btnCloseSidebar');
+    if (btnCloseSidebar) {
+        btnCloseSidebar.addEventListener('click', closeSidebar);
+    }
+
+    // Panel Toggle Button (mobile)
+    const btnTogglePanel = document.getElementById('btnTogglePanel');
+    const panelArea = document.querySelector('.panel-area');
+    if (btnTogglePanel && panelArea) {
+        btnTogglePanel.addEventListener('click', () => {
+            panelArea.classList.toggle('open');
+            btnTogglePanel.classList.toggle('active');
+        });
     }
 
     // View Options
@@ -319,25 +352,107 @@ function setupEventListeners() {
 
 
 
-    // Editor sub-panels
+    // ========================================
+    // EDITOR BUTTONS - Simple direct binding
+    // ========================================
+    function handleEditorAction(action) {
+        if (!getSelectedLayer() && action !== 'text' && action !== 'overlay') {
+            showToast('Selecciona una capa primero', 'error');
+            return;
+        }
+        switch (action) {
+            case 'move': enterMoveMode(); break;
+            case 'crop': enterCropModeV2(false); showPanel('panelCrop'); break;
+            case 'cropAll': enterCropModeV2(true); showPanel('panelCrop'); break;
+            case 'text': enterTextMode(); showPanel('panelText'); break;
+            case 'overlay': showPanel('panelOverlay'); break;
+            case 'rotate': showPanel('panelRotate'); break;
+            case 'flip': showPanel('panelFlip'); break;
+            case 'duplicate': duplicateLayer(); break;
+            case 'center': centerLayer(); break;
+            case 'fitCanvas': fitLayerToCanvas(); break;
+        }
+    }
+
+    // Bind each editor button ONCE with named handler
     document.querySelectorAll('[data-editor]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const action = e.currentTarget.dataset.editor;
-            if (!getSelectedLayer() && action !== 'text' && action !== 'overlay') {
-                showToast('Selecciona una capa primero', 'error');
-                return;
-            }
-            switch (action) {
-                case 'move': enterMoveMode(); break;
-                case 'crop': enterCropModeV2(false); showPanel('panelCrop'); break;
-                case 'cropAll': enterCropModeV2(true); showPanel('panelCrop'); break;
-                case 'text': enterTextMode(); showPanel('panelText'); break;
-                case 'overlay': showPanel('panelOverlay'); break;
-                case 'rotate': showPanel('panelRotate'); break;
-                case 'flip': showPanel('panelFlip'); break;
+        const action = btn.dataset.editor;
+        btn.onclick = function (e) {
+            e.stopPropagation();
+            handleEditorAction(action);
+        };
+    });
+
+    // ========================================
+    // LAYER DROPDOWN
+    // ========================================
+    setupLayerDropdown();
+
+    // Clear history button
+    if (elements.btnClearHistory) {
+        elements.btnClearHistory.onclick = clearHistory;
+    }
+
+    function setupLayerDropdown() {
+        const addLayerBtn = document.getElementById('btnAddLayer');
+        const dropdownMenu = document.getElementById('layerDropdownMenu');
+
+        // Toggle dropdown on + click
+        if (addLayerBtn) {
+            addLayerBtn.onclick = function (e) {
+                e.stopPropagation();
+                if (dropdownMenu) {
+                    const isHidden = dropdownMenu.hidden;
+                    dropdownMenu.hidden = !isHidden;
+
+                    // Position dropdown below button using fixed positioning
+                    if (!dropdownMenu.hidden) {
+                        const rect = addLayerBtn.getBoundingClientRect();
+                        dropdownMenu.style.top = (rect.bottom + 5) + 'px';
+                        dropdownMenu.style.left = rect.left + 'px';
+                    }
+                }
+            };
+        }
+
+        // Handle dropdown item clicks
+        document.querySelectorAll('[data-layer-type]').forEach(btn => {
+            const layerType = btn.dataset.layerType;
+            btn.onclick = function (e) {
+                e.stopPropagation();
+                if (dropdownMenu) dropdownMenu.hidden = true;
+                handleAddLayerByType(layerType);
+            };
+        });
+
+        // Delete layer button
+        const deleteLayerBtn = document.getElementById('btnDeleteLayer');
+        if (deleteLayerBtn) {
+            deleteLayerBtn.onclick = function (e) {
+                e.stopPropagation();
+                deleteSelectedLayer();
+            };
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function (e) {
+            // Only close if click was outside the dropdown area
+            if (dropdownMenu && !dropdownMenu.hidden) {
+                if (!e.target.closest('.layer-dropdown')) {
+                    dropdownMenu.hidden = true;
+                }
             }
         });
-    });
+    }
+
+    // Clear history button
+    if (elements.btnClearHistory) {
+        elements.btnClearHistory.onclick = clearHistory;
+    }
+
+    // ========================================
+    // SUB-PANEL CONTROLS (Crop, Text, Overlay, Rotate, Flip)
+    // ========================================
 
     // Crop
     document.getElementById('applyCrop').addEventListener('click', applyCrop);
@@ -366,29 +481,42 @@ function setupEventListeners() {
         btn.addEventListener('click', (e) => flipSelectedLayer(e.currentTarget.dataset.flip));
     });
 
-    // Layer dropdown menu
-    elements.btnAddLayer.addEventListener('click', (e) => {
-        e.stopPropagation();
-        elements.layerDropdownMenu.hidden = !elements.layerDropdownMenu.hidden;
-    });
-
-    document.querySelectorAll('[data-layer-type]').forEach(btn => {
+    // Filter buttons
+    document.querySelectorAll('[data-filter]').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const type = e.currentTarget.dataset.layerType;
-            elements.layerDropdownMenu.hidden = true;
-            handleAddLayerByType(type);
+            if (!getSelectedLayer()) {
+                showToast('Selecciona una capa primero', 'error');
+                return;
+            }
+            applyFilter(e.currentTarget.dataset.filter);
         });
     });
 
-    // Close dropdown when clicking elsewhere
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.layer-dropdown')) {
-            elements.layerDropdownMenu.hidden = true;
-        }
-    });
+    // Layer opacity slider
+    const opacitySlider = document.getElementById('layerOpacity');
+    const opacityDisplay = document.getElementById('opacityValueDisplay');
+    if (opacitySlider && opacityDisplay) {
+        opacitySlider.addEventListener('input', (e) => {
+            const layer = getSelectedLayer();
+            if (layer) {
+                layer.opacity = parseInt(e.target.value) / 100;
+                opacityDisplay.textContent = e.target.value + '%';
+                renderCanvas();
+            }
+        });
+    }
 
-    elements.btnDeleteLayer.addEventListener('click', deleteSelectedLayer);
-    elements.btnClearHistory.addEventListener('click', clearHistory);
+    // Undo last action button
+    const undoBtn = document.getElementById('undoLastAction');
+    if (undoBtn) {
+        undoBtn.addEventListener('click', () => {
+            if (state.historyIndex > 0) {
+                restoreHistory(state.historyIndex - 1);
+            } else {
+                showToast('No hay acciones para deshacer', 'warning');
+            }
+        });
+    }
 
     // Download
     elements.btnDownload.addEventListener('click', downloadImage);
@@ -492,26 +620,69 @@ function deleteSelectedLayer() {
 }
 
 // ============================================
-// New Layer Tools
+// Layer Tools & Management (Unified)
 // ============================================
+
+function setupLayerEvents() {
+    // Centralized Event Delegation for Layer List
+    elements.layersList.onclick = (e) => {
+        // Handle Visibility Toggle
+        const visBtn = e.target.closest('.layer-visibility');
+        if (visBtn) {
+            e.stopPropagation();
+            toggleLayerVisibility(parseInt(visBtn.dataset.visibility));
+            return;
+        }
+
+        // Handle Move Up
+        const moveUpBtn = e.target.closest('[data-move-up]');
+        if (moveUpBtn) {
+            e.stopPropagation();
+            moveLayerUp(parseInt(moveUpBtn.dataset.moveUp));
+            return;
+        }
+
+        // Handle Move Down
+        const moveDownBtn = e.target.closest('[data-move-down]');
+        if (moveDownBtn) {
+            e.stopPropagation();
+            moveLayerDown(parseInt(moveDownBtn.dataset.moveDown));
+            return;
+        }
+
+        // Handle Layer Selection (Click on item)
+        const item = e.target.closest('.layer-item');
+        if (item) {
+            // Check illegal clicks (if any)
+            selectLayer(parseInt(item.dataset.layerId));
+        }
+    };
+}
+
+// Call this once during init (we will add it to init call later if needed, but safe to call here if elements exist)
+if (elements.layersList) setupLayerEvents();
+
+
 function duplicateLayer() {
     const layer = getSelectedLayer();
     if (!layer) return;
 
     const id = ++state.layerIdCounter;
+    // Deep copy logic
     const newLayer = new Layer(id, layer.name + ' (copia)', layer.type);
     newLayer.setSize(layer.width, layer.height);
     newLayer.ctx.drawImage(layer.canvas, 0, 0);
-    newLayer.x = layer.x + 20; // Offset slightly
+    newLayer.x = layer.x + 20;
     newLayer.y = layer.y + 20;
     newLayer.opacity = layer.opacity;
 
+    // Add to top of stack
     state.layers.push(newLayer);
     state.selectedLayerId = id;
 
     saveHistory('Duplicar capa', '📋');
-    renderLayersPanel();
-    renderCanvas();
+    renderLayersPanel(); // Re-render list
+    renderCanvas();      // Re-render canvas
     showToast('Capa duplicada', 'success');
 }
 
@@ -522,35 +693,41 @@ function centerLayer() {
     layer.x = Math.round((state.canvasWidth - layer.width) / 2);
     layer.y = Math.round((state.canvasHeight - layer.height) / 2);
 
-    saveHistory('Centrar capa', '⊕');
+    saveHistory('Centrar capa', '🎯');
     renderCanvas();
     showToast('Capa centrada', 'success');
 }
 
 function fitLayerToCanvas() {
     const layer = getSelectedLayer();
-    if (!layer || layer.width === 0 || layer.height === 0) return;
+    if (!layer) return;
 
-    // Create snapshot
+    const scaleX = state.canvasWidth / layer.width;
+    const scaleY = state.canvasHeight / layer.height;
+    const scale = Math.min(scaleX, scaleY);
+
+    // Snapshot
     const snapshot = document.createElement('canvas');
     snapshot.width = layer.width;
     snapshot.height = layer.height;
     snapshot.getContext('2d').drawImage(layer.canvas, 0, 0);
 
-    // Resize layer to canvas size
-    layer.setSize(state.canvasWidth, state.canvasHeight);
-    layer.ctx.drawImage(snapshot, 0, 0, state.canvasWidth, state.canvasHeight);
-    layer.x = 0;
-    layer.y = 0;
+    const newW = Math.round(layer.width * scale);
+    const newH = Math.round(layer.height * scale);
 
-    saveHistory('Ajustar capa al canvas', '⛶');
+    layer.setSize(newW, newH);
+    layer.ctx.drawImage(snapshot, 0, 0, newW, newH);
+    layer.x = Math.round((state.canvasWidth - newW) / 2);
+    layer.y = Math.round((state.canvasHeight - newH) / 2);
+
+    saveHistory('Ajustar al canvas', '⛶');
     renderCanvas();
-    showToast('Capa ajustada al canvas', 'success');
+    showToast('Capa ajustada', 'success');
 }
 
 function applyFilter(filterType) {
     const layer = getSelectedLayer();
-    if (!layer || layer.width === 0 || layer.height === 0) return;
+    if (!layer) return;
 
     const imageData = layer.ctx.getImageData(0, 0, layer.width, layer.height);
     const data = imageData.data;
@@ -578,7 +755,8 @@ function applyFilter(filterType) {
             }
             break;
         case 'blur':
-            // Simple box blur (3x3)
+            // Simple blur using canvas filter for performance/simplicity if context allows, 
+            // but for raw pixel data, let's keep it simple or skip excessive loop
             const tempData = new Uint8ClampedArray(data);
             const w = layer.width;
             for (let y = 1; y < layer.height - 1; y++) {
@@ -593,22 +771,6 @@ function applyFilter(filterType) {
                         data[(y * w + x) * 4 + c] = sum / 9;
                     }
                 }
-            }
-            break;
-        case 'brightness':
-            const brightnessAmount = 30;
-            for (let i = 0; i < data.length; i += 4) {
-                data[i] = Math.min(255, data[i] + brightnessAmount);
-                data[i + 1] = Math.min(255, data[i + 1] + brightnessAmount);
-                data[i + 2] = Math.min(255, data[i + 2] + brightnessAmount);
-            }
-            break;
-        case 'contrast':
-            const factor = 1.3; // 30% more contrast
-            for (let i = 0; i < data.length; i += 4) {
-                data[i] = Math.min(255, Math.max(0, (data[i] - 128) * factor + 128));
-                data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * factor + 128));
-                data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * factor + 128));
             }
             break;
     }
@@ -629,6 +791,7 @@ function toggleLayerVisibility(id) {
 }
 
 function moveLayerUp(id) {
+    // Moving UP means moving towards the END of the array (drawn later/on top)
     const index = state.layers.findIndex(l => l.id === id);
     if (index < state.layers.length - 1) {
         const temp = state.layers[index];
@@ -640,6 +803,7 @@ function moveLayerUp(id) {
 }
 
 function moveLayerDown(id) {
+    // Moving DOWN means moving towards start of array (drawn earlier/behind)
     const index = state.layers.findIndex(l => l.id === id);
     if (index > 0) {
         const temp = state.layers[index];
@@ -652,60 +816,38 @@ function moveLayerDown(id) {
 
 function renderLayersPanel() {
     const list = elements.layersList;
+    if (!list) return;
 
     if (state.layers.length === 0) {
         list.innerHTML = '<div class="empty-layers"><p>Carga una imagen para comenzar</p></div>';
         return;
     }
 
-    // Render from top to bottom (reverse order for display, but index 0 is bottom)
-    list.innerHTML = state.layers.slice().reverse().map(layer => `
-        <div class="layer-item ${layer.id === state.selectedLayerId ? 'selected' : ''}" data-layer-id="${layer.id}">
+    // Render Clean HTML
+    // We render in REVERSE order so top layers appear at the TOP of the list
+    const layersHTML = state.layers.slice().reverse().map(layer => {
+        const isSelected = layer.id === state.selectedLayerId;
+        const icon = getLayerPreviewIcon(layer.type);
+
+        return `
+        <div class="layer-item ${isSelected ? 'selected' : ''}" data-layer-id="${layer.id}">
             <div class="layer-controls-left">
-                <button class="layer-visibility ${layer.visible ? '' : 'hidden'}" data-visibility="${layer.id}">
+                <button class="layer-visibility layer-action-btn ${layer.visible ? '' : 'hidden'}" 
+                        data-visibility="${layer.id}" title="Alternar visibilidad">
                     ${layer.visible ? '👁️' : '👁️‍🗨️'}
                 </button>
             </div>
-            <div class="layer-preview">
-                ${getLayerPreviewIcon(layer.type)}
-            </div>
-            <span class="layer-name">${layer.name}</span>
+            <div class="layer-preview">${icon}</div>
+            <span class="layer-name" title="${layer.name}">${layer.name}</span>
             <div class="layer-reorder">
                 <button class="layer-move-btn up" data-move-up="${layer.id}" title="Subir">▲</button>
                 <button class="layer-move-btn down" data-move-down="${layer.id}" title="Bajar">▼</button>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 
-    // Add event listeners
-    list.querySelectorAll('.layer-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            if (!e.target.closest('.layer-visibility') && !e.target.closest('.layer-move-btn')) {
-                selectLayer(parseInt(item.dataset.layerId));
-            }
-        });
-    });
-
-    list.querySelectorAll('.layer-visibility').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleLayerVisibility(parseInt(btn.dataset.visibility));
-        });
-    });
-
-    list.querySelectorAll('[data-move-up]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            moveLayerUp(parseInt(btn.dataset.moveUp));
-        });
-    });
-
-    list.querySelectorAll('[data-move-down]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            moveLayerDown(parseInt(btn.dataset.moveDown));
-        });
-    });
+    list.innerHTML = layersHTML;
 }
 
 function getLayerPreviewIcon(type) {
@@ -915,7 +1057,11 @@ function renderHistoryPanel() {
 // ============================================
 function handleFileSelect(e) {
     const file = e.target.files[0];
-    if (file) loadImageFile(file);
+    if (file) {
+        loadImageFile(file);
+    }
+    // Reset file input so the same file can be selected again
+    e.target.value = '';
 }
 
 function handleDragOver(e) {
@@ -2170,3 +2316,5 @@ function closeSidebar() {
 
 // Initialize
 init();
+
+

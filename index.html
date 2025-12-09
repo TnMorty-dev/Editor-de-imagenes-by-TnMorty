@@ -32,6 +32,7 @@
                 <div class="menu-header">
                     <span class="menu-icon">☰</span>
                     <span>Menú Principal</span>
+                    <button class="sidebar-close-btn" id="btnCloseSidebar" aria-label="Cerrar menú">×</button>
                 </div>
                 <nav class="menu-nav">
                     <button class="menu-item" data-action="load" id="btnLoad">
@@ -84,9 +85,15 @@
                 </nav>
                 <div class="sidebar-footer">
                     <p>by TnMorty</p>
-                    <p class="version-tag">v0.0.4</p>
+                    <p class="version-tag">v0.1.0</p>
                 </div>
             </aside>
+
+            <!-- Overlay to close sidebar on mobile -->
+            <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+            <!-- Mobile Panel Toggle -->
+            <button class="panel-toggle-btn" id="btnTogglePanel" aria-label="Ver capas e historial">📑</button>
 
             <!-- Canvas Area -->
             <section class="canvas-area">
@@ -94,12 +101,14 @@
                     <!-- Grid Overlay (Moved here to cover full container) -->
                     <div id="gridOverlay" class="grid-overlay" hidden></div>
 
+                    <!-- File input OUTSIDE dropZone to prevent double-click -->
+                    <input type="file" id="fileInput" accept="image/*" hidden>
+
                     <div class="drop-zone" id="dropZone">
                         <div class="drop-content">
                             <span class="drop-icon">🖼️</span>
                             <p class="drop-text">Arrastra una imagen aquí</p>
                             <p class="drop-subtext">o haz clic para seleccionar</p>
-                            <input type="file" id="fileInput" accept="image/*" hidden>
                         </div>
                     </div>
 
@@ -274,42 +283,96 @@
                 </div>
 
                 <!-- Editor Panel -->
-                <div class="panel" id="panelEditor" hidden>
+                <div class="panel editor-panel" id="panelEditor" hidden>
                     <div class="panel-header">
                         <h3>Editor de Imagen</h3>
                         <button class="panel-close" data-close>×</button>
                     </div>
                     <div class="panel-content">
-                        <p class="panel-desc">Edita la capa seleccionada:</p>
-                        <button class="editor-btn" data-editor="move">
-                            <span class="editor-icon">✋</span>
-                            <span class="editor-label">Mover Capa</span>
-                        </button>
-                        <button class="editor-btn" data-editor="crop">
-                            <span class="editor-icon">✂️</span>
-                            <span class="editor-label">Recortar Capa</span>
-                        </button>
-                        <button class="editor-btn" data-editor="cropAll">
-                            <span class="editor-icon">🔲</span>
-                            <span class="editor-label">Recortar Todas las Capas</span>
-                        </button>
+                        <p class="panel-desc">Herramientas de edición:</p>
 
-                        <button class="editor-btn" data-editor="text">
-                            <span class="editor-icon">📝</span>
-                            <span class="editor-label">Agregar Texto (Nueva Capa)</span>
-                        </button>
-                        <button class="editor-btn" data-editor="overlay">
-                            <span class="editor-icon">🎴</span>
-                            <span class="editor-label">Insertar Imagen (Nueva Capa)</span>
-                        </button>
-                        <button class="editor-btn" data-editor="rotate">
-                            <span class="editor-icon">🔄</span>
-                            <span class="editor-label">Rotar Capa</span>
-                        </button>
-                        <button class="editor-btn" data-editor="flip">
-                            <span class="editor-icon">↔️</span>
-                            <span class="editor-label">Voltear Capa</span>
-                        </button>
+                        <!-- Transform Tools -->
+                        <div class="editor-section">
+                            <span class="section-title">📐 Transformar</span>
+                            <button class="editor-btn" data-editor="move">
+                                <span class="editor-icon">✋</span>
+                                <span class="editor-label">Mover Capa</span>
+                            </button>
+                            <button class="editor-btn" data-editor="rotate">
+                                <span class="editor-icon">🔄</span>
+                                <span class="editor-label">Rotar Capa</span>
+                            </button>
+                            <button class="editor-btn" data-editor="flip">
+                                <span class="editor-icon">↔️</span>
+                                <span class="editor-label">Voltear Capa</span>
+                            </button>
+                        </div>
+
+                        <!-- Crop Tools -->
+                        <div class="editor-section">
+                            <span class="section-title">✂️ Recortar</span>
+                            <button class="editor-btn" data-editor="crop">
+                                <span class="editor-icon">✂️</span>
+                                <span class="editor-label">Recortar Capa</span>
+                            </button>
+                            <button class="editor-btn" data-editor="cropAll">
+                                <span class="editor-icon">🔲</span>
+                                <span class="editor-label">Recortar Todo</span>
+                            </button>
+                        </div>
+
+                        <!-- Add Content -->
+                        <div class="editor-section">
+                            <span class="section-title">➕ Añadir</span>
+                            <button class="editor-btn" data-editor="text">
+                                <span class="editor-icon">📝</span>
+                                <span class="editor-label">Texto</span>
+                            </button>
+                            <button class="editor-btn" data-editor="overlay">
+                                <span class="editor-icon">🎴</span>
+                                <span class="editor-label">Imagen</span>
+                            </button>
+                        </div>
+
+                        <!-- Layer Tools -->
+                        <div class="editor-section">
+                            <span class="section-title">📑 Capas</span>
+                            <button class="editor-btn" data-editor="duplicate">
+                                <span class="editor-icon">📋</span>
+                                <span class="editor-label">Duplicar Capa</span>
+                            </button>
+                            <button class="editor-btn" data-editor="center">
+                                <span class="editor-icon">⊕</span>
+                                <span class="editor-label">Centrar Capa</span>
+                            </button>
+                            <button class="editor-btn" data-editor="fitCanvas">
+                                <span class="editor-icon">⛶</span>
+                                <span class="editor-label">Ajustar al Canvas</span>
+                            </button>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="editor-section">
+                            <span class="section-title">🎨 Filtros</span>
+                            <div class="filter-grid">
+                                <button class="filter-btn" data-filter="grayscale">B/N</button>
+                                <button class="filter-btn" data-filter="sepia">Sepia</button>
+                                <button class="filter-btn" data-filter="invert">Invertir</button>
+                                <button class="filter-btn" data-filter="blur">Desenfocar</button>
+                                <button class="filter-btn" data-filter="brightness">Brillo +</button>
+                                <button class="filter-btn" data-filter="contrast">Contraste</button>
+                            </div>
+                            <button class="undo-filter-btn" id="undoLastAction">↩️ Deshacer Último Cambio</button>
+                        </div>
+
+                        <!-- Opacity Control -->
+                        <div class="editor-section">
+                            <span class="section-title">👁️ Opacidad</span>
+                            <div class="opacity-control">
+                                <input type="range" id="layerOpacity" min="0" max="100" value="100">
+                                <span id="opacityValueDisplay">100%</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
