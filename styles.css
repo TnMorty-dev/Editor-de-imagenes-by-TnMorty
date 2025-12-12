@@ -297,6 +297,20 @@ body {
     box-shadow: var(--accent-glow);
 }
 
+/* Disabled menu items (before image is loaded) */
+.menu-item:disabled,
+.menu-item[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.menu-item:disabled:hover,
+.menu-item[disabled]:hover {
+    background: transparent;
+    transform: none;
+}
+
 .menu-number {
     display: flex;
     align-items: center;

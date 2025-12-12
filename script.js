@@ -260,10 +260,22 @@ function setupEventListeners() {
         e.stopPropagation();
         triggerFileInput();
     });
-    document.getElementById('btnPresetRes').addEventListener('click', () => showPanel('panelPresetRes'));
-    document.getElementById('btnManualRes').addEventListener('click', () => showPanel('panelManualRes'));
-    document.getElementById('btnConvert').addEventListener('click', () => showPanel('panelConvert'));
-    document.getElementById('btnEditor').addEventListener('click', () => showPanel('panelEditor'));
+    // Menu options 1-4 require an image to be loaded first
+    const btnPresetRes = document.getElementById('btnPresetRes');
+    const btnManualRes = document.getElementById('btnManualRes');
+    const btnConvert = document.getElementById('btnConvert');
+    const btnEditor = document.getElementById('btnEditor');
+
+    // Initially disable these buttons until an image is loaded
+    btnPresetRes.disabled = true;
+    btnManualRes.disabled = true;
+    btnConvert.disabled = true;
+    btnEditor.disabled = true;
+
+    btnPresetRes.addEventListener('click', () => { if (!btnPresetRes.disabled) showPanel('panelPresetRes'); });
+    btnManualRes.addEventListener('click', () => { if (!btnManualRes.disabled) showPanel('panelManualRes'); });
+    btnConvert.addEventListener('click', () => { if (!btnConvert.disabled) showPanel('panelConvert'); });
+    btnEditor.addEventListener('click', () => { if (!btnEditor.disabled) showPanel('panelEditor'); });
     document.getElementById('btnExit').addEventListener('click', resetEditor);
 
     // Sidebar Toggle
@@ -468,17 +480,25 @@ function setupEventListeners() {
     document.getElementById('applyOverlay').addEventListener('click', applyOverlay);
     document.getElementById('cancelOverlay').addEventListener('click', () => { exitEditMode(); showPanel('panelEditor'); });
 
-    // Rotate
+    // Rotate - use onclick to prevent double-binding
     document.querySelectorAll('[data-rotate]').forEach(btn => {
-        btn.addEventListener('click', (e) => rotateSelectedLayer(parseInt(e.currentTarget.dataset.rotate)));
+        const angle = parseInt(btn.dataset.rotate);
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            rotateSelectedLayer(angle);
+        };
     });
-    document.getElementById('applyCustomRotate').addEventListener('click', () => {
+    document.getElementById('applyCustomRotate').onclick = () => {
         rotateSelectedLayer(parseInt(document.getElementById('customRotate').value) || 0);
-    });
+    };
 
-    // Flip
+    // Flip - use onclick to prevent double-binding
     document.querySelectorAll('[data-flip]').forEach(btn => {
-        btn.addEventListener('click', (e) => flipSelectedLayer(e.currentTarget.dataset.flip));
+        const direction = btn.dataset.flip;
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            flipSelectedLayer(direction);
+        };
     });
 
     // Filter buttons
@@ -771,6 +791,22 @@ function applyFilter(filterType) {
                         data[(y * w + x) * 4 + c] = sum / 9;
                     }
                 }
+            }
+            break;
+        case 'brightness':
+            const brightnessFactor = 40; // Increase brightness by 40
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = Math.min(255, data[i] + brightnessFactor);
+                data[i + 1] = Math.min(255, data[i + 1] + brightnessFactor);
+                data[i + 2] = Math.min(255, data[i + 2] + brightnessFactor);
+            }
+            break;
+        case 'contrast':
+            const contrastFactor = 1.3; // Increase contrast by 30%
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = Math.min(255, Math.max(0, ((data[i] - 128) * contrastFactor) + 128));
+                data[i + 1] = Math.min(255, Math.max(0, ((data[i + 1] - 128) * contrastFactor) + 128));
+                data[i + 2] = Math.min(255, Math.max(0, ((data[i + 2] - 128) * contrastFactor) + 128));
             }
             break;
     }
@@ -1104,6 +1140,12 @@ function loadImageFile(file) {
             elements.canvasContainer.classList.add('has-image');
             elements.panelLayers.hidden = false;
             elements.downloadSection.hidden = false;
+
+            // Enable menu options 1-4 now that an image is loaded
+            document.getElementById('btnPresetRes').disabled = false;
+            document.getElementById('btnManualRes').disabled = false;
+            document.getElementById('btnConvert').disabled = false;
+            document.getElementById('btnEditor').disabled = false;
 
             fitToScreen();
 
